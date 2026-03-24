@@ -1,65 +1,93 @@
-import Image from "next/image";
+'use client'
+
+import { useEffect, useState } from 'react'
+
+interface Link {
+  date: string
+  title: string
+  url: string
+  notes: string
+  domain: string
+}
+
+function formatDate(iso: string) {
+  const m = iso.match(/^(\d{4})-(\d{2})-(\d{2})$/)
+  if (!m) return iso
+  return `${m[3]}.${m[2]}.${m[1]}`
+}
 
 export default function Home() {
+  const [links, setLinks] = useState<Link[]>([])
+  const [query, setQuery] = useState('')
+
+  useEffect(() => {
+    fetch('/api/links').then(r => r.json()).then(setLinks)
+  }, [])
+
+  const filtered = query
+    ? links.filter(l =>
+        l.title.toLowerCase().includes(query.toLowerCase()) ||
+        l.notes.toLowerCase().includes(query.toLowerCase()) ||
+        l.domain.toLowerCase().includes(query.toLowerCase())
+      )
+    : links
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
+    <main className="max-w-[820px] mx-auto px-6 sm:px-8 pb-20">
+      <header className="flex items-baseline justify-between gap-4 py-10 border-b border-white/10">
+        <h1 className="font-serif text-[1.75rem] tracking-tight">Links</h1>
+        <span className="text-sm text-zinc-500">Things worth coming back to</span>
+      </header>
+
+      <div className="flex items-center gap-3 py-4">
+        <input
+          type="text"
+          placeholder="Search…"
+          value={query}
+          onChange={e => setQuery(e.target.value)}
+          className="flex-1 bg-white/5 border border-white/10 rounded-lg px-3.5 py-2 text-sm text-zinc-100 placeholder:text-zinc-600 outline-none focus:border-indigo-500 transition-colors"
         />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
+        <span className="text-xs text-zinc-600 shrink-0">{filtered.length} links</span>
+      </div>
+
+      <div>
+        {filtered.map((link, i) => (
           <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
+            key={i}
+            href={link.url}
             target="_blank"
             rel="noopener noreferrer"
+            className="grid gap-x-3 items-start py-4 border-b border-white/[0.07] hover:bg-white/[0.03] -mx-2 px-2 rounded-lg transition-colors group"
+            style={{ gridTemplateColumns: '72px 24px 1fr 16px' }}
           >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
+            <span className="text-xs text-zinc-600 tabular-nums pt-0.5 leading-5">
+              {formatDate(link.date)}
+            </span>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={`https://www.google.com/s2/favicons?sz=32&domain=${link.domain}`}
+              width={18}
+              height={18}
+              className="rounded-sm mt-0.5"
+              alt=""
+              onError={e => (e.currentTarget.style.display = 'none')}
             />
-            Deploy Now
+            <div className="min-w-0">
+              <p className="text-sm font-medium text-zinc-100 truncate mb-0.5 leading-5">{link.title}</p>
+              {link.notes && (
+                <p className="text-xs text-zinc-500 leading-relaxed mb-1">{link.notes}</p>
+              )}
+              <span className="text-[11px] text-zinc-700 truncate block">
+                {link.url.replace(/^https?:\/\/(www\.)?/, '').replace(/\/$/, '')}
+              </span>
+            </div>
+            <span className="text-zinc-700 group-hover:text-zinc-400 text-sm pt-0.5 transition-colors">↗</span>
           </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
-    </div>
-  );
+        ))}
+        {filtered.length === 0 && (
+          <p className="text-sm text-zinc-600 text-center py-16">No links found</p>
+        )}
+      </div>
+    </main>
+  )
 }
